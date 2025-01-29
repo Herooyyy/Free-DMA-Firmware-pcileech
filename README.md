@@ -3,3 +3,7 @@
 Download as 
 http://DMA.WANG
 已更新读卡器/采集卡/USB/SATA硬盘
+
+目前已提供75T的测试，35T测试将在后续更新
+
+支持三角洲/Valorant/完美5E
