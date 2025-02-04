@@ -7,3 +7,10 @@ http://DMA.WANG
 目前已提供75T的测试，35T测试将在后续更新
 
 支持三角洲/Valorant/完美5E
+
+开通Discord/WechatGroup
+
+https://discord.gg/8RwUeM5X
+
+You can Join ours Wechat Group By add my WeChat
+Tel：+19096660132
