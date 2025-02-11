@@ -11,7 +11,7 @@ https://DMA.WANG
 
 开通Discord/WechatGroup
 
-https://discord.gg/8RwUeM5X
+https://discord.gg/UuGkmBtHZZ
 
 You can Join ours Wechat Group By add my WeChat
 Tel：+19096660132
