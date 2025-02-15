@@ -1,0 +1,1 @@
+D:\vi\Vivado\2024.1\bin\vivado -source C:\Users\Administrator\Desktop\ZDMA\vivado_generate_project_100t.tcl -notrace -nolog -nojournal
