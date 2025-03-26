@@ -19,5 +19,6 @@ Tel：+19096660132
 <POST>
 ASMedia 3.0 USB驱动 for ZDMA 100t
 PCI ISA BRIDGE for FACEIT ANTICHEAT
-![IMG_6957](https://github.com/user-attachments/assets/fa9fe666-ee81-4a79-a8bb-db0d3c0351bc)
-![IMG_6958(20250326-224420)](https://github.com/user-attachments/assets/d264a019-421f-4fc8-85f6-f20baf68a4e8)
+![IMG_6957](https://github.com/user-attachments/assets/7a110095-ea52-41d0-902c-e8ed27e58f2b)
+![23](https://github.com/user-attachments/assets/860fa442-5e40-4ed3-b266-2bc0d6f45412)
+
