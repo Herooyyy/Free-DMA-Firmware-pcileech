@@ -1,8 +1,9 @@
 # Firmware
-免费的DMA固件,通过EKK检测/vanguard[VGK]/FaceitAnti-Cheat[FAC] Free DMA firmware bypass Ekknod DMATEST.
-Download
+已通过Faceit/Vanguard检测
+Bypass Faceit/Vanguard
 
 https://DMA.WANG
+
 已更新采集卡/USB/SATA硬盘/ISA Bridge
 
 目前已提供测试
@@ -18,10 +19,7 @@ Tel：+19096660132
 
 <POST>
 ASMedia 3.0 USB驱动 for ZDMA 100t
-  //
-
-  
-  PCI ISA BRIDGE for FACEIT ANTICHEAT
+PCI ISA BRIDGE for FACEIT ANTICHEAT
 
   
   
