@@ -1,30 +1,23 @@
 # Firmware
-已通过Faceit/Vanguard检测
 Bypass Faceit/Vanguard
+
+Realized the method of bypassing Faceit anti-cheating without passing through MSI/MSI-X
+
+
 
 https://DMA.WANG
 
-已更新采集卡/USB/SATA硬盘/ISA Bridge
+ASMedia USB3.0/3.1/Intel NMD NVme Updated
 
-目前已提供测试
-<AD>
-支持三角洲/Valorant/完美5E
 
-开通Discord
 
-https://discord.gg/UuGkmBtHZZ
 
-You can Join ours Wechat Group By add my WeChat
-Tel：+19096660132
 
-<POST>
-ASMedia 3.0 USB驱动 for ZDMA 100t
-PCI ISA BRIDGE for FACEIT ANTICHEAT
+Discord:https://discord.gg/UuGkmBtHZZ
 
-  
-  
-  # img1
-https://github.com/user-attachments/assets/7a110095-ea52-41d0-902c-e8ed27e58f2b
-# img2
-https://github.com/user-attachments/assets/860fa442-5e40-4ed3-b266-2bc0d6f45412
+You can Join ours Wechat Group By add my WeChat Tel：+19096660132
+
+<Source>
+ASMedia 3.2 USB for ZDMA 100t
+PCI ISA BRIDGE for FACEIT
 
