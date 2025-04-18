@@ -13,7 +13,7 @@ ASMedia USB3.0/3.1/Intel NMD NVme Updated
 
 
 
-Discord:https://discord.gg/UuGkmBtHZZ
+Discord:https://discord.gg/rDydQaePa3
 
 WeChat Tel：+19096660132
 
