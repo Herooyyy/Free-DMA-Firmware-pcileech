@@ -13,6 +13,7 @@ Discord:https://discord.gg/rDydQaePa3
 
 20250511 updates sata ahci controller+fake hardisk bypass ACE AntiCheat
 
+如果AHCI无法在你的电脑上运行，请无视此项目，仅供学习
 
 <Source>
 ASMedia 3.2 USB for ZDMA 100t
