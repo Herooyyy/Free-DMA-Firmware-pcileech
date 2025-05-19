@@ -11,7 +11,7 @@ Discord:https://discord.gg/rDydQaePa3
 
 20250511 updates sata ahci controller+fake hardisk bypass ACE AntiCheat
 
-#<Source>
+# <Source>
 
 ASMedia 3.2 USB for ZDMA 100t
 
@@ -21,7 +21,7 @@ SATA for ACE bypass
 
 asus C100C wireless nic is preparing to opensource,because of someone asked me to emu it but he don't want pay.
 
-#MSI-X Interrupt
+# MSI-X Interrupt
 
 If you dont know how to release the msi-x interrupt, check the Release https://github.com/Herooyyy/Free-DMA-Firmware-pcileech/releases/tag/MSIX Here is a ASMedia MSI-X release
 
