@@ -21,3 +21,5 @@ ASMedia 3.2 USB for ZDMA 100t
 PCI ISA BRIDGE for FACEIT
 
 SATA for ACE bypass
+
+asus C100C wireless nic is preparing to opensource,because of someone asked me to emu it but he don't want pay.
