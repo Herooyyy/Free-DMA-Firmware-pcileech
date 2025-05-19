@@ -9,13 +9,10 @@ ASMedia USB3.0/3.1/Intel NMD NVme Updated
 
 Discord:https://discord.gg/rDydQaePa3
 
-不信的人不要来加我买东西或者白嫖了，能让你白嫖的我早就已经开源在这了。
-
 20250511 updates sata ahci controller+fake hardisk bypass ACE AntiCheat
 
-如果AHCI无法在你的电脑上运行，请无视此项目，仅供学习
+#<Source>
 
-<Source>
 ASMedia 3.2 USB for ZDMA 100t
 
 PCI ISA BRIDGE for FACEIT
@@ -24,7 +21,7 @@ SATA for ACE bypass
 
 asus C100C wireless nic is preparing to opensource,because of someone asked me to emu it but he don't want pay.
 
-##MSI-X Interrupt
+#MSI-X Interrupt
 
 If you dont know how to release the msi-x interrupt, check the Release https://github.com/Herooyyy/Free-DMA-Firmware-pcileech/releases/tag/MSIX Here is a ASMedia MSI-X release
 
