@@ -23,3 +23,8 @@ PCI ISA BRIDGE for FACEIT
 SATA for ACE bypass
 
 asus C100C wireless nic is preparing to opensource,because of someone asked me to emu it but he don't want pay.
+
+##MSI-X Interrupt
+
+If you dont know how to release the msi-x interrupt, check the Release https://github.com/Herooyyy/Free-DMA-Firmware-pcileech/releases/tag/MSIX Here is a ASMedia MSI-X release
+
