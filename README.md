@@ -1,4 +1,6 @@
 # Firmware
+MSI-X Release published
+
 Bypass Faceit/Vanguard
 
 Realized the method of bypassing Faceit anti-cheating without passing through MSI/MSI-X
