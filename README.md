@@ -27,6 +27,8 @@ asus C100C wireless nic is preparing to opensource,because of someone asked me t
 
 ## ASMedia XHCI Controller
 
+你可以直接通过此文件生成MSI-X中断/计数
 If you dont know how to release the msi-x interrupt, check the Release https://github.com/Herooyyy/Free-DMA-Firmware-pcileech/releases/tag/MSIX Here is a ASMedia MSI-X release
+
 
 一些人很喜欢上传一些无用的代码,如果你想学习,我建议从此开始
