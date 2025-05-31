@@ -1,0 +1,1 @@
+E:\Xilinx\Vivado\2024.2\bin\vivado -source vivado_generate_project_captaindma_100t.tcl -notrace -nolog -nojournal

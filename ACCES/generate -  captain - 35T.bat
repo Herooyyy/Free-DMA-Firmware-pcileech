@@ -1,0 +1,1 @@
+D:\vivado242\Vivado\2024.2\bin\vivado -source vivado_generate_project_squirrel.tcl -notrace -nolog -nojournal
