@@ -9,11 +9,15 @@ https://DMA.WANG
 
 ASMedia USB3.0/3.1/Intel NMD NVme Updated
 
-Discord:https://discord.gg/rDydQaePa3
 
-20250511 updates sata ahci controller+fake hardisk bypass ACE AntiCheat
+# Discord
+if you don't had any important things do NOT request to join DC server.
 
-# <Source>
+https://discord.gg/rDydQaePa3
+
+# About Source
+
+Don't ask me any published src. Try do by urself.
 
 ASMedia 3.2 USB for ZDMA 100t
 
