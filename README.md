@@ -21,9 +21,13 @@ PCI ISA BRIDGE for FACEIT
 
 SATA for ACE bypass
 
-asus C100C wireless nic is preparing to opensource,because of someone asked me to emu it but he don't want pay.
+# ACCES CARD IS OPENSOURCE NOW
 
-# MSI-X Interrupt
+![a934098b0cf58086abab4725774c8e99](https://github.com/user-attachments/assets/8d3ed5b9-912f-43f1-81d4-02f76925ab31)
+
+
+
+# MSI-X Interrupt teach
 
 ## ASMedia XHCI Controller
 
