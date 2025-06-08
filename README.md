@@ -27,6 +27,8 @@ SATA for ACE bypass
 
 # ACCES CARD IS OPENSOURCE NOW
 
+Bypass NEW EAC!
+
 ![a934098b0cf58086abab4725774c8e99](https://github.com/user-attachments/assets/8d3ed5b9-912f-43f1-81d4-02f76925ab31)
 
 
