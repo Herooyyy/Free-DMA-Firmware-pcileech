@@ -1,5 +1,5 @@
 # Firmware
-MSI-X Release published
+PCI1734 released
 
 Bypass Faceit/Vanguard
 
@@ -25,13 +25,8 @@ PCI ISA BRIDGE for FACEIT
 
 SATA for ACE bypass
 
-# ACCES CARD IS OPENSOURCE NOW
-
-Bypass NEW EAC!
-
-![a934098b0cf58086abab4725774c8e99](https://github.com/user-attachments/assets/8d3ed5b9-912f-43f1-81d4-02f76925ab31)
-
-
+# PCI-1734
+请查看bar_controller.sv，基于LSFR随机tlp，通过ACE检测，目前的问题是Delta Force反馈击杀后踢出游戏。
 
 # MSI-X Interrupt teach
 
