@@ -26,7 +26,7 @@ PCI ISA BRIDGE for FACEIT
 SATA for ACE bypass
 
 # PCI-1734
-请查看bar_controller.sv，基于LSFR随机tlp，通过ACE检测，目前的问题是Delta Force反馈击杀后踢出游戏。
+请查看bar_controller.sv，基于LSFR随机tlp，通过ACE检测，目前的问题是Delta Force反馈击杀后踢出游戏。源码已上传至release，同时，如果你有好的想法，请联系我
 
 # MSI-X Interrupt teach
 
