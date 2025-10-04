@@ -1,3 +1,35 @@
+# News
+随着众多ANTICHEATS都推出了IOMMU-DMA数据通道错误检测，传统DMA方案已逐渐成为历史，近两个月来我一直在开发新的方式，目前仍有一些性能问题，例如不经常的low speed卡顿，但这已经够用了。
+
+The dual-machine memory converter has been completed.
+
+Support DMA links for all software
+
+Characteristics:
+
+1: No DMA board is required, and data transmission is driven through the network card RDMA, and any Pcileech software connection is supported.
+
+2: Support VT-D/SVM Mode/IOMMU enablement
+
+3: It cannot be shielded by any AC, and the local network card is used as the DMA medium.
+
+The monthly subscription is currently on sale, and the source code is being considered.
+
+双机内存转换器已经完成。
+
+支持所有软件的DMA链接
+
+特征：
+
+1：无需DMA板，数据传输通过网卡RDMA驱动，并支持任何Pcileech软件连接。
+
+2：支持VT-D/SVM模式/IOMMU启用
+
+3：它不能被任何交流电屏蔽，本地网卡用作DMA介质。
+
+月度订阅，源代码正在考虑出售。
+
+
 # Firmware
 PCI1734 released
 
