@@ -13,8 +13,6 @@ Characteristics:
 
 3: It cannot be shielded by any AC, and the local network card is used as the DMA medium.
 
-The monthly subscription is currently on sale, and the source code is being considered.
-
 双机内存转换器已经完成。
 
 支持所有软件的DMA链接
