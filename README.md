@@ -27,7 +27,6 @@ The monthly subscription is currently on sale, and the source code is being cons
 
 3：它不能被任何交流电屏蔽，本地网卡用作DMA介质。
 
-月度订阅，源代码正在考虑出售。
 
 
 # Firmware
