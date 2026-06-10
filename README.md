@@ -1,3 +1,26 @@
+# REAL PHYSICAL ETH Card RDMA Replaced solution
+我们认为传统的DMA方案已经无法长期的绕过EAC/VANGUARD检测
+现已推出基于真实物理网卡以替代DMA的方案
+
+1.你无需在主机运行任何软件(和DMA一样)
+
+2.无需固件，无需害怕DMA FIRMWARE检测，因为网卡是100%真实的合法设备。
+现已支持 ACE/Vanguard/EAC 且没有封禁记录。
+
+We believe that the traditional DMA scheme can no longer bypass EAC/VANGUARD detection for a long time.
+
+A scheme based on real physical network cards to replace DMA has been launched.
+
+1. You don't need to run any software on the host (just like DMA)
+
+2. No need for firmware, no need to be afraid of DMA FIRMWARE detection, because the network card is a 100% real legal device.
+
+ACE/Vanguard/EAC is now supported and there is no ban record.
+
+If you are interesting and want to buy it. Check the #Discord
+
+
+
 # Firmware
 PCI1734 released
 
@@ -5,7 +28,7 @@ Bypass Faceit/Vanguard
 
 Realized the method of bypassing Faceit anti-cheating without passing through MSI/MSI-X
 
-https://DMA.WANG
+HTTPS://DMA.WANG
 
 ASMedia USB3.0/3.1/Intel NMD NVme Updated
 
