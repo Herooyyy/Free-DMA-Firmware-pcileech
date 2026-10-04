@@ -803,265 +803,207 @@ endmodule
 module pcileech_bar_impl_io0(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
-    bit [87:0]      drd_req_ctx;
-    bit [31:0]      drd_req_addr;
-    bit             drd_req_valid;
+    // BAR0: Primary Command Block — ATA Task File Registers (8 bytes IO)
+    // Real ASM1061 idle values: Status=0x50(DRDY|DSC), others=0x00
+    bit [87:0]  drd_req_ctx;
+    bit [31:0]  drd_req_addr;
+    bit         drd_req_valid;
+    wire [2:0]  reg_offset = (drd_req_addr - (base_address_register & 32'hFFFFFFF8)) & 3'h7;
 
-    bit [31:0]      dwr_addr;
-    bit [31:0]      dwr_data;
-    bit             dwr_valid;
-
-    bit [31:0]      data_32;
-
-    always @ (posedge clk) begin
-        if (rst)
-            
-        drd_req_ctx     <= rd_req_ctx;
-        drd_req_valid   <= rd_req_valid;
-        dwr_valid       <= wr_valid;
-        drd_req_addr    <= rd_req_addr;
-        rd_rsp_ctx      <= drd_req_ctx;
-        rd_rsp_valid    <= drd_req_valid;
-        dwr_addr        <= wr_addr;
-        dwr_data        <= wr_data;
-
+    always @(posedge clk) begin
+        drd_req_ctx   <= rd_req_ctx;
+        drd_req_valid <= rd_req_valid;
+        drd_req_addr  <= rd_req_addr;
+        rd_rsp_ctx    <= drd_req_ctx;
+        rd_rsp_valid  <= drd_req_valid;
         if (drd_req_valid) begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFFFF0)) & 32'h57) 
-          2'h00 : rd_rsp_data <= 32'h0000E00A;
-        default : rd_rsp_data <= 32'h00000000; 
+            case (reg_offset)
+                3'h0 : rd_rsp_data <= 32'h00000000;  // Data register
+                3'h1 : rd_rsp_data <= 32'h00000000;  // Error register (no error)
+                3'h2 : rd_rsp_data <= 32'h00000001;  // Sector Count
+                3'h3 : rd_rsp_data <= 32'h00000001;  // LBA Low
+                3'h4 : rd_rsp_data <= 32'h00000000;  // LBA Mid
+                3'h5 : rd_rsp_data <= 32'h00000000;  // LBA High
+                3'h6 : rd_rsp_data <= 32'h000000A0;  // Device (DEV=0, LBA mode)
+                3'h7 : rd_rsp_data <= 32'h00000050;  // Status: DRDY|DSC
+                default: rd_rsp_data <= 32'h00000000;
             endcase
-       end
+        end
     end
-
 endmodule
 
 module pcileech_bar_impl_io1(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
-    bit [87:0]      drd_req_ctx;
-    bit [31:0]      drd_req_addr;
-    bit             drd_req_valid;
+    // BAR1: Primary Control Block (4 bytes IO)
+    // Offset 0: Alternate Status (read) / Device Control (write)
+    bit [87:0]  drd_req_ctx;
+    bit [31:0]  drd_req_addr;
+    bit         drd_req_valid;
 
-    bit [31:0]      dwr_addr;
-    bit [31:0]      dwr_data;
-    bit             dwr_valid;
-
-    bit [31:0]      data_32;
-
-
-    always @ (posedge clk) begin
-        if (rst)
-          
-        drd_req_ctx     <= rd_req_ctx;
-        drd_req_valid   <= rd_req_valid;
-        dwr_valid       <= wr_valid;
-        drd_req_addr    <= rd_req_addr;
-        rd_rsp_ctx      <= drd_req_ctx;
-        rd_rsp_valid    <= drd_req_valid;
-        dwr_addr        <= wr_addr;
-        dwr_data        <= wr_data;
-
-        if (drd_req_valid) begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFFFF0)) & 32'h43) 
-          2'h00 : rd_rsp_data <= 32'h0000E008;
-        default : rd_rsp_data <= 32'h00000000; 
-            endcase
-       end
+    always @(posedge clk) begin
+        drd_req_ctx   <= rd_req_ctx;
+        drd_req_valid <= rd_req_valid;
+        drd_req_addr  <= rd_req_addr;
+        rd_rsp_ctx    <= drd_req_ctx;
+        rd_rsp_valid  <= drd_req_valid;
+        if (drd_req_valid)
+            rd_rsp_data <= 32'h00000050;  // Alternate Status: DRDY|DSC (same as Status)
+        else
+            rd_rsp_data <= 32'h00000000;
     end
-
 endmodule
 
 module pcileech_bar_impl_io2(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
-    bit [87:0]      drd_req_ctx;
-    bit [31:0]      drd_req_addr;
-    bit             drd_req_valid;
+    // BAR2: Secondary Command Block (8 bytes IO) — no device on port 1
+    bit [87:0]  drd_req_ctx;
+    bit [31:0]  drd_req_addr;
+    bit         drd_req_valid;
+    wire [2:0]  reg_offset = (drd_req_addr - (base_address_register & 32'hFFFFFFF8)) & 3'h7;
 
-    bit [31:0]      dwr_addr;
-    bit [31:0]      dwr_data;
-    bit             dwr_valid;
-
-    bit [31:0]      data_32;
-
-
-    always @ (posedge clk) begin
-        if (rst)
-            
-        drd_req_ctx     <= rd_req_ctx;
-        drd_req_valid   <= rd_req_valid;
-        dwr_valid       <= wr_valid;
-        drd_req_addr    <= rd_req_addr;
-        rd_rsp_ctx      <= drd_req_ctx;
-        rd_rsp_valid    <= drd_req_valid;
-        dwr_addr        <= wr_addr;
-        dwr_data        <= wr_data;
-
+    always @(posedge clk) begin
+        drd_req_ctx   <= rd_req_ctx;
+        drd_req_valid <= rd_req_valid;
+        drd_req_addr  <= rd_req_addr;
+        rd_rsp_ctx    <= drd_req_ctx;
+        rd_rsp_valid  <= drd_req_valid;
         if (drd_req_valid) begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFFFF0)) & 32'h37) 
-          2'h00 : rd_rsp_data <= 32'h0000E006;
-        default : rd_rsp_data <= 32'h00000000; 
+            case (reg_offset)
+                3'h7 :    rd_rsp_data <= 32'h00000000;  // Status: 0x00 (no device)
+                default:  rd_rsp_data <= 32'h00000000;
             endcase
-       end
+        end
     end
-
 endmodule
 
 module pcileech_bar_impl_io3(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
-    bit [87:0]      drd_req_ctx;
-    bit [31:0]      drd_req_addr;
-    bit             drd_req_valid;
+    // BAR3: Secondary Control Block (4 bytes IO) — no device on port 1
+    bit [87:0]  drd_req_ctx;
+    bit [31:0]  drd_req_addr;
+    bit         drd_req_valid;
 
-    bit [31:0]      dwr_addr;
-    bit [31:0]      dwr_data;
-    bit             dwr_valid;
-
-    bit [31:0]      data_32;
-
-
-    always @ (posedge clk) begin
-        if (rst)
-            
-        drd_req_ctx     <= rd_req_ctx;
-        drd_req_valid   <= rd_req_valid;
-        dwr_valid       <= wr_valid;
-        drd_req_addr    <= rd_req_addr;
-        rd_rsp_ctx      <= drd_req_ctx;
-        rd_rsp_valid    <= drd_req_valid;
-        dwr_addr        <= wr_addr;
-        dwr_data        <= wr_data;
-
-        if (drd_req_valid) begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFFFF0)) & 32'h23) 
-          2'h00 : rd_rsp_data <= 32'h0000E004;
-        default : rd_rsp_data <= 32'h00000000; 
-            endcase
-       end
+    always @(posedge clk) begin
+        drd_req_ctx   <= rd_req_ctx;
+        drd_req_valid <= rd_req_valid;
+        drd_req_addr  <= rd_req_addr;
+        rd_rsp_ctx    <= drd_req_ctx;
+        rd_rsp_valid  <= drd_req_valid;
+        if (drd_req_valid)
+            rd_rsp_data <= 32'h00000000;  // Alternate Status: no device
+        else
+            rd_rsp_data <= 32'h00000000;
     end
-
 endmodule
 
 module pcileech_bar_impl_io4(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
-    bit [87:0]      drd_req_ctx;
-    bit [31:0]      drd_req_addr;
-    bit             drd_req_valid;
+    // BAR4: Bus Master IDE (32 bytes IO)
+    // 0x00: Primary BM Command, 0x02: Primary BM Status, 0x04-07: Primary PRDT
+    // 0x08: Secondary BM Command, 0x0A: Secondary BM Status, 0x0C-0F: Secondary PRDT
+    bit [87:0]  drd_req_ctx;
+    bit [31:0]  drd_req_addr;
+    bit         drd_req_valid;
+    wire [4:0]  reg_offset = (drd_req_addr - (base_address_register & 32'hFFFFFFE0)) & 5'h1F;
 
-    bit [31:0]      dwr_addr;
-    bit [31:0]      dwr_data;
-    bit             dwr_valid;
+    // Writable state
+    bit [7:0]   bm_pri_cmd;
+    bit [7:0]   bm_pri_status;
+    bit [7:0]   bm_sec_cmd;
+    bit [7:0]   bm_sec_status;
 
-    bit [31:0]      data_32;
+    always @(posedge clk) begin
+        if (rst) begin
+            bm_pri_cmd    <= 8'h00;
+            bm_pri_status <= 8'h60;  // DMA capable on both drives
+            bm_sec_cmd    <= 8'h00;
+            bm_sec_status <= 8'h60;
+        end
 
-
-    always @ (posedge clk) begin
-        if (rst)
-         
-        drd_req_ctx     <= rd_req_ctx;
-        drd_req_valid   <= rd_req_valid;
-        dwr_valid       <= wr_valid;
-        drd_req_addr    <= rd_req_addr;
-        rd_rsp_ctx      <= drd_req_ctx;
-        rd_rsp_valid    <= drd_req_valid;
-        dwr_addr        <= wr_addr;
-        dwr_data        <= wr_data;
+        drd_req_ctx   <= rd_req_ctx;
+        drd_req_valid <= rd_req_valid;
+        drd_req_addr  <= rd_req_addr;
+        rd_rsp_ctx    <= drd_req_ctx;
+        rd_rsp_valid  <= drd_req_valid;
 
         if (drd_req_valid) begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFFFF0)) & 32'h1F) 
-          2'h00 : rd_rsp_data <= 32'h0000E000;
-          2'h08 : rd_rsp_data <= 32'h0000E001;
-          2'h10 : rd_rsp_data <= 32'h0000E002;
-          2'h18 : rd_rsp_data <= 32'h0000E003;
-        default : rd_rsp_data <= 32'h00000000; 
+            case (reg_offset)
+                5'h00 : rd_rsp_data <= {24'h0, bm_pri_cmd};
+                5'h02 : rd_rsp_data <= {24'h0, bm_pri_status};
+                5'h04 : rd_rsp_data <= 32'h00000000;  // PRDT addr
+                5'h08 : rd_rsp_data <= {24'h0, bm_sec_cmd};
+                5'h0A : rd_rsp_data <= {24'h0, bm_sec_status};
+                5'h0C : rd_rsp_data <= 32'h00000000;
+                default: rd_rsp_data <= 32'h00000000;
             endcase
-       end
+        end
     end
-
 endmodule
 
-// ============================================================================
-// pcileech_bar_impl_SATA — ASM1061 AHCI SATA Controller Emulation
-// Full AHCI HBA + IDENTIFY DEVICE + Virtual Disk + SMART
-// Target: Captain 75T, Donor: ASM1061 (VID:1B21 DID:0612)
-// ============================================================================
 module pcileech_bar_impl_SATA(
     input               rst,
     input               clk,
