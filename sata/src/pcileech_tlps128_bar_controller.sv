@@ -1057,122 +1057,213 @@ module pcileech_bar_impl_io4(
 
 endmodule
 
+// ============================================================================
+// pcileech_bar_impl_SATA — ASM1061 AHCI SATA Controller Emulation
+// Full AHCI HBA + IDENTIFY DEVICE + Virtual Disk + SMART
+// Target: Captain 75T, Donor: ASM1061 (VID:1B21 DID:0612)
+// ============================================================================
 module pcileech_bar_impl_SATA(
     input               rst,
     input               clk,
-    // incoming BAR writes:
     input [31:0]        wr_addr,
     input [3:0]         wr_be,
     input [31:0]        wr_data,
     input               wr_valid,
-    // incoming BAR reads:
     input  [87:0]       rd_req_ctx,
     input  [31:0]       rd_req_addr,
     input               rd_req_valid,
     input  [31:0]       base_address_register,
-    // outgoing BAR read replies:
     output bit [87:0]   rd_rsp_ctx,
     output bit [31:0]   rd_rsp_data,
     output bit          rd_rsp_valid
 );
 
-bit [87:0]      drd_req_ctx;
-bit [31:0]      drd_req_addr;
-bit             drd_req_valid;
-              
-bit [31:0]      dwr_addr;
-bit [3:0]       dwr_be;
-bit [31:0]      dwr_data;
-bit             dwr_valid;
-bit [3:0]       busy_cnt0, busy_cnt1;
+// Pipeline registers
+bit [87:0]  drd_req_ctx;
+bit [31:0]  drd_req_addr;
+bit         drd_req_valid;
+bit [31:0]  dwr_addr;
+bit [3:0]   dwr_be;
+bit [31:0]  dwr_data;
+bit         dwr_valid;
 
-// Writable register storage
-bit [31:0]      ghc_reg;        // Global Host Control (0x10)
-bit [31:0]      port0_cmd;      // Port 0 Command (0x118)
-bit [31:0]      port1_cmd;      // Port 1 Command (0x198)
-bit [31:0]      port0_serr;     // Port 0 SError (0x128)
-bit [31:0]      port1_serr;     // Port 1 SError (0x1A4)
-bit [31:0]      port0_clb;
-bit [31:0]      port0_fb;
-bit [31:0]      port1_clb;
-bit [31:0]      port1_fb;
-bit [31:0]      port0_is;
-bit [31:0]      port1_is;
-bit [31:0]      port0_tfd;
-bit [31:0]      port1_tfd;
+// BSY/DRQ timing — simulates real AHCI command latency
+bit [7:0]   busy_cnt0;
 
-// ====== 5KB数据区 ======
-localparam DATA_BASE = 32'h2000;
-localparam DATA_SIZE = 32'd5120; // 5KB
-reg [31:0] disk_mem [0:(DATA_SIZE/4)-1]; // 1280个32位字
+// ======================== AHCI HBA Registers ========================
+// Global
+bit [31:0]  ghc_reg;
+bit [31:0]  global_is;       // Interrupt Status (0x08)
 
-// ====== Identify Device 数据区 ======
-localparam IDENTIFY_BASE = 32'h3000;
-localparam IDENTIFY_SIZE = 32'd512; // 512字节
+// Port 0 only — single port ASM1061 config (PI=0x01)
+bit [31:0]  port0_clb;
+bit [31:0]  port0_clbu;
+bit [31:0]  port0_fb;
+bit [31:0]  port0_fbu;
+bit [31:0]  port0_is;
+bit [31:0]  port0_ie;
+bit [31:0]  port0_cmd;
+bit [31:0]  port0_tfd;
+bit [31:0]  port0_sig;
+bit [31:0]  port0_ssts;
+bit [31:0]  port0_sctl;
+bit [31:0]  port0_serr;
+bit [31:0]  port0_sact;
+bit [31:0]  port0_ci;
+
+// Address decode helper
+wire [31:0] bar_offset = (drd_req_addr - (base_address_register & 32'hFFFFF000));
+wire [31:0] wr_offset  = (dwr_addr     - (base_address_register & 32'hFFFFF000));
+
+// ======================== IDENTIFY DEVICE (512 bytes) ========================
+// WDC WD2500AAKX-001CA0 — 250GB WD Blue, 7200RPM
 reg [15:0] identify_data [0:255];
 
 initial begin : init_identify
     integer i;
     for (i = 0; i < 256; i = i + 1) identify_data[i] = 16'h0000;
-    // 序列号（10-19字，举例："1234567890"）
-    identify_data[0]  = 16'h0040; // 固定磁盘
-    identify_data[1]  = 16'h3FFF; // 默认，最大可用逻辑扇区数
-    identify_data[2]  = 16'hC837; // 特性支持（LBA等）
-    identify_data[3]  = 16'h0010; // 保留
-    identify_data[4]  = 16'h0000; // 保留
-    identify_data[5]  = 16'h0000; // 保留
-    identify_data[6]  = 16'h0000; // 保留
-    identify_data[7]  = 16'h0000; // 保留
-    identify_data[8]  = 16'h0000; // 保留
-    identify_data[9]  = 16'h0000; // 保留
-    identify_data[10] = "C" | ("1" << 8);
-    identify_data[11] = "3" | ("A" << 8);
-    identify_data[12] = "V" | ("A" << 8);
-    identify_data[13] = "2" | ("2" << 8);
-    identify_data[14] = "5" | ("A" << 8);
-    identify_data[15] = "C" | ("D" << 8); // 9 0
-    // 剩余补空格
-    for (i = 16; i <= 19; i = i + 1) identify_data[i] = " " | (" " << 8);
-    // 硬盘容量（20-22字，举例："500GB"）
-    identify_data[20] = "5" | ("0" << 8);
-    identify_data[21] = "0" | ("G" << 8);
-    identify_data[22] = "B" | (" " << 8);
-    // 固件版本（23-26字，举例："V1.0"）
-    identify_data[23] = "V" | ("1" << 8);
-    identify_data[24] = "." | ("0" << 8);
-    // 型号字符串（27-46字，"Colorful_SL500_2H200"）
-    identify_data[27] = "C" | ("O" << 8);
-    identify_data[28] = "L" | ("O" << 8);
-    identify_data[29] = "R" | ("F" << 8);
-    identify_data[30] = "U" | ("L" << 8);
-    identify_data[31] = "S" | ("L" << 8);
-    identify_data[32] = "5" | ("0" << 8);
-    identify_data[33] = "0" | ("2" << 8);
-    identify_data[34] = "H" | ("2" << 8);
-    identify_data[35] = "H" | ("2" << 8);
-    identify_data[36] = "0" | (" " << 8);
-    // 剩余补空格
-    for (i = 37; i <= 46; i = i + 1) identify_data[i] = " " | (" " << 8);
+
+    identify_data[0]   = 16'h0040;        // general config: fixed, non-removable
+    identify_data[1]   = 16'd16383;       // logical cylinders
+    identify_data[3]   = 16'd16;          // heads
+    identify_data[6]   = 16'd63;          // sectors per track
+
+    // Serial number (words 10-19): "WD-WMAZ1234567890" (20 chars, byte-swapped)
+    identify_data[10]  = "W" | ("D" << 8);
+    identify_data[11]  = "-" | ("W" << 8);
+    identify_data[12]  = "M" | ("A" << 8);
+    identify_data[13]  = "Z" | ("1" << 8);
+    identify_data[14]  = "2" | ("3" << 8);
+    identify_data[15]  = "4" | ("5" << 8);
+    identify_data[16]  = "6" | ("7" << 8);
+    identify_data[17]  = "8" | ("9" << 8);
+    identify_data[18]  = "0" | (" " << 8);
+    identify_data[19]  = " " | (" " << 8);
+
+    // Firmware revision (words 23-26): "01.00A01"
+    identify_data[23]  = "0" | ("1" << 8);
+    identify_data[24]  = "." | ("0" << 8);
+    identify_data[25]  = "0" | ("A" << 8);
+    identify_data[26]  = "0" | ("1" << 8);
+
+    // Model number (words 27-46): "WDC WD2500AAKX-001CA0"
+    identify_data[27]  = "W" | ("D" << 8);
+    identify_data[28]  = "C" | (" " << 8);
+    identify_data[29]  = "W" | ("D" << 8);
+    identify_data[30]  = "2" | ("5" << 8);
+    identify_data[31]  = "0" | ("0" << 8);
+    identify_data[32]  = "A" | ("A" << 8);
+    identify_data[33]  = "K" | ("X" << 8);
+    identify_data[34]  = "-" | ("0" << 8);
+    identify_data[35]  = "0" | ("1" << 8);
+    identify_data[36]  = "C" | ("A" << 8);
+    identify_data[37]  = "0" | (" " << 8);
+    for (i = 38; i <= 46; i = i + 1) identify_data[i] = " " | (" " << 8);
+
+    identify_data[47]  = 16'h8000;        // max sectors per R/W multiple: 128
+    identify_data[49]  = 16'h2F00;        // capabilities: LBA, DMA, IORDY
+    identify_data[50]  = 16'h4001;        // capabilities2
+    identify_data[53]  = 16'h0007;        // translation fields valid
+    identify_data[59]  = 16'h0110;        // current sectors per multiple
+    identify_data[60]  = 16'hE6B0;        // total LBA28 sectors (low)  — 250GB
+    identify_data[61]  = 16'h1D1C;        // total LBA28 sectors (high) — 488397168
+    identify_data[63]  = 16'h0007;        // multiword DMA modes
+    identify_data[64]  = 16'h0003;        // PIO modes supported (3,4)
+    identify_data[65]  = 16'h0078;        // min multiword DMA transfer time
+    identify_data[66]  = 16'h0078;        // recommended multiword DMA time
+    identify_data[67]  = 16'h0078;        // min PIO transfer time (no IORDY)
+    identify_data[68]  = 16'h0078;        // min PIO transfer time (IORDY)
+    identify_data[75]  = 16'h001F;        // queue depth: 32
+    identify_data[76]  = 16'h0E00;        // SATA capabilities (Gen1,Gen2,Gen3)
+    identify_data[77]  = 16'h0040;        // SATA additional
+    identify_data[78]  = 16'h004C;        // SATA features supported
+    identify_data[79]  = 16'h0040;        // SATA features enabled
+    identify_data[80]  = 16'h01F0;        // major version: ATA/ATAPI-5,6,7,8
+    identify_data[81]  = 16'h0000;        // minor version
+    identify_data[82]  = 16'h746B;        // command set supported 1
+    identify_data[83]  = 16'h7400;        // command set supported 2: 48bit LBA, FLUSH
+    identify_data[84]  = 16'h4100;        // command set supported ext
+    identify_data[85]  = 16'h746B;        // command set enabled 1
+    identify_data[86]  = 16'h7400;        // command set enabled 2
+    identify_data[87]  = 16'h4100;        // command set default
+    identify_data[88]  = 16'h407F;        // UDMA modes (0-6, mode 6 active)
+    identify_data[93]  = 16'h0000;        // hardware reset result
+    identify_data[100] = 16'hE6B0;        // total LBA48 sectors (word 0)  — 250GB
+    identify_data[101] = 16'h1D1C;        // total LBA48 sectors (word 1)
+    identify_data[102] = 16'h0000;        // total LBA48 sectors (word 2)
+    identify_data[103] = 16'h0000;        // total LBA48 sectors (word 3)
+    identify_data[106] = 16'h6003;        // physical/logical sector: 4K phys, 512 logical
+    identify_data[169] = 16'h0000;        // TRIM not supported (HDD)
+    identify_data[217] = 16'd7200;        // nominal rotation rate: 7200 RPM
 end
 
-always @ (posedge clk) begin
+// ======================== SMART Data (512 bytes) ========================
+// Minimal SMART: temperature, power-on hours, reallocated, power cycles
+reg [15:0] smart_data [0:255];
+
+initial begin : init_smart
+    integer j;
+    for (j = 0; j < 256; j = j + 1) smart_data[j] = 16'h0000;
+    // SMART structure version
+    smart_data[0]   = 16'h0010;        // version 16
+    // Attribute: Reallocated Sector Count (ID=5)
+    smart_data[1]   = {8'd0, 8'd5};    // flags, id
+    smart_data[2]   = 16'd200;         // current value
+    smart_data[3]   = 16'd200;         // worst value
+    smart_data[4]   = 16'h0000;        // raw value low (0 reallocated)
+    // Attribute: Power-On Hours (ID=9)
+    smart_data[7]   = {8'd0, 8'd9};
+    smart_data[8]   = 16'd98;          // current
+    smart_data[9]   = 16'd98;          // worst
+    smart_data[10]  = 16'd2847;        // raw: 2847 hours (~4 months)
+    // Attribute: Power Cycle Count (ID=12)
+    smart_data[13]  = {8'd0, 8'd12};
+    smart_data[14]  = 16'd100;
+    smart_data[15]  = 16'd100;
+    smart_data[16]  = 16'd347;         // raw: 347 power cycles
+    // Attribute: Temperature (ID=194)
+    smart_data[19]  = {8'd0, 8'd194};
+    smart_data[20]  = 16'd119;         // current (normalized)
+    smart_data[21]  = 16'd107;         // worst
+    smart_data[22]  = 16'd33;          // raw: 33°C
+end
+
+// ======================== Data Area (8KB in BRAM) ========================
+localparam DATA_BASE     = 32'h2000;
+localparam DATA_SIZE     = 32'd8192;
+localparam IDENTIFY_BASE = 32'h3000;
+localparam SMART_BASE    = 32'h3200;
+
+reg [31:0] disk_mem [0:(DATA_SIZE/4)-1];
+
+initial begin : init_disk_mem
+    integer k;
+    for (k = 0; k < DATA_SIZE/4; k = k + 1) disk_mem[k] = 32'h00000000;
+end
+
+// ======================== Main Logic ========================
+always @(posedge clk) begin
     if (rst) begin
-        // 初始化寄存器
-        ghc_reg     <= 32'h00010301;  
-        port0_cmd   <= 32'h00000006;
-        port1_cmd   <= 32'h00000006;
+        // AHCI Global
+        ghc_reg     <= 32'h80000001;    // AE=1, AHCI enabled
+        global_is   <= 32'h00000000;
+
+        // Port 0 — disk present, link active, ready
+        port0_clb   <= 32'h00000000;
+        port0_clbu  <= 32'h00000000;
+        port0_fb    <= 32'h00000000;
+        port0_fbu   <= 32'h00000000;
+        port0_is    <= 32'h00000000;
+        port0_ie    <= 32'h00000000;
+        port0_cmd   <= 32'h00000016;    // FRE=1, FR=1, POD=1, SUD=1
+        port0_tfd   <= 32'h00000050;    // BSY=0, DRQ=0, status=0x50 (DRDY+DSC)
+        port0_sig   <= 32'h00000101;    // ATA device signature
+        port0_ssts  <= 32'h00000113;    // DET=3 (present+comm), SPD=1 (Gen1), IPM=1 (active)
+        port0_sctl  <= 32'h00000000;
         port0_serr  <= 32'h00000000;
-        port1_serr  <= 32'hFFFFFFFF;
-        port0_clb   <= 32'h99FE1000;
-        port0_fb    <= 32'h99FE1400;
-        port1_clb   <= 32'h99FE7000;
-        port1_fb    <= 32'h99FE7400;
-        port0_is    <= 32'h7D40004F;
-        port1_is    <= 32'h7D40004F;
-        port0_tfd   <= 32'h0000007F;
-        port1_tfd   <= 32'h0000007F;
-        busy_cnt0   <= 0;
-        busy_cnt1   <= 0;
+        port0_sact  <= 32'h00000000;
+        port0_ci    <= 32'h00000000;
+        busy_cnt0   <= 8'd0;
     end else begin
         // Pipeline inputs
         drd_req_ctx   <= rd_req_ctx;
@@ -1183,83 +1274,118 @@ always @ (posedge clk) begin
         dwr_be        <= wr_be;
         dwr_data      <= wr_data;
 
-        // 写入CMD或TFD时，设置BSY，启动延迟
-        if (dwr_valid && (({dwr_addr[31:24], dwr_addr[23:16], dwr_addr[15:08], dwr_addr[07:00]} - (base_address_register & 32'hFFFFF000)) & 32'h01FF) == 32'h0118) begin
-            port0_tfd[7] <= 1'b1; // BSY
-            port0_tfd[3] <= 1'b0; // DRQ
-            busy_cnt0    <= 4'd10; // 10周期延迟
-        end
-        if (dwr_valid && (({dwr_addr[31:24], dwr_addr[23:16], dwr_addr[15:08], dwr_addr[07:00]} - (base_address_register & 32'hFFFFF000)) & 32'h01FF) == 32'h0198) begin
-            port1_tfd[7] <= 1'b1;
-            port1_tfd[3] <= 1'b0;
-            busy_cnt1    <= 4'd10;
+        // ============ Write handling ============
+        if (dwr_valid) begin
+            case (wr_offset[11:0])
+                // Global
+                12'h004 : ghc_reg    <= dwr_data;     // GHC
+                12'h008 : global_is  <= global_is & ~dwr_data;  // IS: RW1C
+
+                // Port 0
+                12'h100 : port0_clb  <= dwr_data;
+                12'h104 : port0_clbu <= dwr_data;
+                12'h108 : port0_fb   <= dwr_data;
+                12'h10C : port0_fbu  <= dwr_data;
+                12'h110 : port0_is   <= port0_is & ~dwr_data;  // PxIS: RW1C
+                12'h114 : port0_ie   <= dwr_data;
+                12'h118 : begin
+                    port0_cmd <= dwr_data;
+                    // CMD write triggers BSY simulation
+                    if (dwr_data[0]) begin  // ST bit set
+                        port0_tfd[7] <= 1'b1;   // BSY
+                        port0_tfd[3] <= 1'b0;   // clear DRQ
+                        busy_cnt0    <= 8'd15;   // 15 cycle delay
+                    end
+                end
+                12'h12C : port0_sctl <= dwr_data;
+                12'h130 : port0_serr <= port0_serr & ~dwr_data; // PxSERR: RW1C
+                12'h134 : port0_sact <= dwr_data;
+                12'h138 : begin
+                    port0_ci <= dwr_data;
+                    // CI write also triggers BSY
+                    if (|dwr_data) begin
+                        port0_tfd[7] <= 1'b1;
+                        port0_tfd[3] <= 1'b0;
+                        busy_cnt0    <= 8'd15;
+                    end
+                end
+                default : ; // ignore unknown writes
+            endcase
+
+            // Data area writes
+            if (wr_offset >= DATA_BASE && wr_offset < (DATA_BASE + DATA_SIZE)) begin
+                disk_mem[(wr_offset - DATA_BASE) >> 2] <= dwr_data;
+            end
         end
 
-        // 延迟结束后，清除BSY，设置DRQ
+        // ============ BSY/DRQ state machine ============
         if (busy_cnt0 != 0) begin
             busy_cnt0 <= busy_cnt0 - 1;
-            if (busy_cnt0 == 1) begin
-                port0_tfd[7] <= 1'b0; // 清除BSY
-                port0_tfd[3] <= 1'b1; // 设置DRQ
+            if (busy_cnt0 == 8'd1) begin
+                port0_tfd[7] <= 1'b0;    // clear BSY
+                port0_tfd[3] <= 1'b0;    // DRQ stays clear (command complete)
+                port0_tfd[4] <= 1'b1;    // DRDY
+                port0_ci     <= 32'h0;   // clear CI — command done
+                port0_is[0]  <= 1'b1;    // DHRS — D2H Register FIS Interrupt
             end
-        end
-        if (busy_cnt1 != 0) begin
-            busy_cnt1 <= busy_cnt1 - 1;
-            if (busy_cnt1 == 1) begin
-                port1_tfd[7] <= 1'b0;
-                port1_tfd[3] <= 1'b1;
-            end
-        end
-
-        // ====== 写数据区 ======
-        if (dwr_valid &&
-            ((dwr_addr - (base_address_register & 32'hFFFFF000)) >= DATA_BASE) &&
-            ((dwr_addr - (base_address_register & 32'hFFFFF000)) < (DATA_BASE + DATA_SIZE))) begin
-            disk_mem[((dwr_addr - (base_address_register & 32'hFFFFF000)) - DATA_BASE) >> 2] <= dwr_data;
         end
     end
 
-    // ====== 读Identify Device区 ======
-    if (drd_req_valid &&
-        ((drd_req_addr - (base_address_register & 32'hFFFFF000)) >= IDENTIFY_BASE) &&
-        ((drd_req_addr - (base_address_register & 32'hFFFFF000)) < (IDENTIFY_BASE + IDENTIFY_SIZE))) begin
-        integer idx;
-        idx = ((drd_req_addr - (base_address_register & 32'hFFFFF000)) - IDENTIFY_BASE) >> 2;
-        rd_rsp_data <= {identify_data[idx*2+1], identify_data[idx*2]};
-    end
-
-    // ====== 读数据区和寄存器 ======
-    rd_rsp_ctx    <= drd_req_ctx;
-    rd_rsp_valid  <= drd_req_valid;
+    // ============ Read handling ============
+    rd_rsp_ctx   <= drd_req_ctx;
+    rd_rsp_valid <= drd_req_valid;
 
     if (drd_req_valid) begin
-        if (((drd_req_addr - (base_address_register & 32'hFFFFF000)) >= DATA_BASE) &&
-            ((drd_req_addr - (base_address_register & 32'hFFFFF000)) < (DATA_BASE + DATA_SIZE))) begin
-            rd_rsp_data <= disk_mem[((drd_req_addr - (base_address_register & 32'hFFFFF000)) - DATA_BASE) >> 2];
-        end else begin
-            case (({drd_req_addr[31:24], drd_req_addr[23:16], drd_req_addr[15:08], drd_req_addr[07:00]} - (base_address_register & 32'hFFFFF000)) & 32'h01FF)
-                // Global Registers
-                32'h0000 : rd_rsp_data <= 32'hCB30FF63;  // CAP
-                32'h0004 : rd_rsp_data <= 32'h80000002;  // VS
-                32'h000C : rd_rsp_data <= 32'h00000011;  // PI
-                32'h0010 : rd_rsp_data <= ghc_reg;       // GHC
-                32'h0014 : rd_rsp_data <= 32'h00000000;  // EM_LOC
-                // Port 0 Registers
-                32'h0100 : rd_rsp_data <= port0_clb;     // P0CLB
-                32'h0108 : rd_rsp_data <= port0_fb;      // P0FB
-                32'h0114 : rd_rsp_data <= port0_is;      // P0IS
-                32'h0118 : rd_rsp_data <= port0_cmd;     // P0CMD
-                32'h0120 : rd_rsp_data <= port0_tfd;     // P0TFD
-                32'h0124 : rd_rsp_data <= 32'hFFFFFFFF;  // P0SIGs
-                32'h0128 : rd_rsp_data <= port0_serr;    // P0SERR
-                // Port 1 Registers
-                32'h0180 : rd_rsp_data <= port1_clb;     // P1CLB
-                32'h0188 : rd_rsp_data <= port1_fb;      // P1FB
-                32'h0194 : rd_rsp_data <= port1_is;      // P1IS
-                32'h0198 : rd_rsp_data <= port1_cmd;     // P1CMD
-                32'h01A0 : rd_rsp_data <= port1_tfd;     // P1TFD
-                32'h01A4 : rd_rsp_data <= port1_serr;    // P1SERR
-                default: rd_rsp_data <= 32'h00000000;    // Default PCIe value
+        // Identify Device area (0x3000-0x31FF)
+        if (bar_offset >= IDENTIFY_BASE && bar_offset < (IDENTIFY_BASE + 32'd512)) begin
+            rd_rsp_data <= {identify_data[((bar_offset - IDENTIFY_BASE) >> 1) | 1],
+                           identify_data[((bar_offset - IDENTIFY_BASE) >> 1) & ~1]};
+        end
+        // SMART data area (0x3200-0x33FF)
+        else if (bar_offset >= SMART_BASE && bar_offset < (SMART_BASE + 32'd512)) begin
+            rd_rsp_data <= {smart_data[((bar_offset - SMART_BASE) >> 1) | 1],
+                           smart_data[((bar_offset - SMART_BASE) >> 1) & ~1]};
+        end
+        // Disk data area (0x2000-0x3FFF)
+        else if (bar_offset >= DATA_BASE && bar_offset < (DATA_BASE + DATA_SIZE)) begin
+            rd_rsp_data <= disk_mem[(bar_offset - DATA_BASE) >> 2];
+        end
+        // AHCI registers
+        else begin
+            case (bar_offset[11:0])
+                // ---- Global Host Control ----
+                12'h000 : rd_rsp_data <= 32'h00011F01;  // CAP: NP=1, NCS=31, SSS=1, ISS=Gen2
+                12'h004 : rd_rsp_data <= ghc_reg;
+                12'h008 : rd_rsp_data <= global_is;
+                12'h00C : rd_rsp_data <= 32'h00000001;  // PI: port 0 only
+                12'h010 : rd_rsp_data <= 32'h00010301;  // VS: AHCI 1.3.1
+                12'h014 : rd_rsp_data <= 32'h00000000;  // CCC_CTL
+                12'h018 : rd_rsp_data <= 32'h00000000;  // CCC_PORTS
+                12'h01C : rd_rsp_data <= 32'h00000000;  // EM_LOC
+                12'h020 : rd_rsp_data <= 32'h00000000;  // EM_CTL
+                12'h024 : rd_rsp_data <= 32'h00000000;  // CAP2
+                12'h028 : rd_rsp_data <= 32'h00000000;  // BOHC
+
+                // ---- Port 0 Registers (offset 0x100) ----
+                12'h100 : rd_rsp_data <= port0_clb;
+                12'h104 : rd_rsp_data <= port0_clbu;
+                12'h108 : rd_rsp_data <= port0_fb;
+                12'h10C : rd_rsp_data <= port0_fbu;
+                12'h110 : rd_rsp_data <= port0_is;
+                12'h114 : rd_rsp_data <= port0_ie;
+                12'h118 : rd_rsp_data <= port0_cmd;
+                12'h11C : rd_rsp_data <= 32'h00000000;  // reserved
+                12'h120 : rd_rsp_data <= port0_tfd;
+                12'h124 : rd_rsp_data <= port0_sig;
+                12'h128 : rd_rsp_data <= port0_ssts;
+                12'h12C : rd_rsp_data <= port0_sctl;
+                12'h130 : rd_rsp_data <= port0_serr;
+                12'h134 : rd_rsp_data <= port0_sact;
+                12'h138 : rd_rsp_data <= port0_ci;
+                12'h13C : rd_rsp_data <= 32'h00000000;  // PxSNTF
+                12'h140 : rd_rsp_data <= 32'h00000000;  // PxFBS
+
+                default : rd_rsp_data <= 32'h00000000;
             endcase
         end
     end else begin
